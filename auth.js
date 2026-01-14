@@ -1,6 +1,6 @@
 // auth.js - Handles simulated authentication, registration, login, logout, and session persistence
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const authSection = document.getElementById('auth-section');
     const resumeSection = document.getElementById('resume-section');
     const landingSection = document.getElementById('landing-section');
@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('login');
     const showLogin = document.getElementById('show-login');
     const showRegister = document.getElementById('show-register');
-    const logoutBtn = document.getElementById('logout');
+    const logoutBtn = document.getElementById('logout'); // May not exist, handled with null checks
     const topLoginBtn = document.getElementById('show-login-top');
     const topRegisterBtn = document.getElementById('show-register-top');
     const ctaBtn = document.getElementById('cta-create');
@@ -23,20 +23,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Toggle between register and login forms
-    showLogin.addEventListener('click', function(e) {
+    showLogin.addEventListener('click', function (e) {
         e.preventDefault();
         document.getElementById('register-form').classList.add('hidden');
         document.getElementById('login-form').classList.remove('hidden');
     });
 
-    showRegister.addEventListener('click', function(e) {
+    showRegister.addEventListener('click', function (e) {
         e.preventDefault();
         document.getElementById('login-form').classList.add('hidden');
         document.getElementById('register-form').classList.remove('hidden');
     });
 
     if (topLoginBtn) {
-        topLoginBtn.addEventListener('click', function(e) {
+        topLoginBtn.addEventListener('click', function (e) {
             e.preventDefault();
             showAuthSection();
             document.getElementById('register-form').classList.add('hidden');
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     if (topRegisterBtn) {
-        topRegisterBtn.addEventListener('click', function(e) {
+        topRegisterBtn.addEventListener('click', function (e) {
             e.preventDefault();
             showAuthSection();
             document.getElementById('login-form').classList.add('hidden');
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     if (ctaBtn) {
-        ctaBtn.addEventListener('click', function(){
+        ctaBtn.addEventListener('click', function () {
             const currentUser = localStorage.getItem('currentUser');
             if (currentUser && getUserData(currentUser)?.session) {
                 showResumeSection();
@@ -62,59 +62,191 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Register user
-    registerForm.addEventListener('submit', function(e) {
+    // Register user with validation
+    registerForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const fullName = document.getElementById('reg-fullname').value;
-        const email = document.getElementById('reg-email').value;
+
+        // Clear previous errors
+        ValidationUI.clearError('reg-fullname');
+        ValidationUI.clearError('reg-email');
+        ValidationUI.clearError('reg-password');
+
+        const fullName = document.getElementById('reg-fullname').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
         const password = document.getElementById('reg-password').value;
 
-        if (getUserData(email)) {
-            alert('User already exists!');
-            return;
+        let isValid = true;
+
+        // Validate full name
+        if (Validator.isEmpty(fullName)) {
+            ValidationUI.showError('reg-fullname', 'Full name is required');
+            isValid = false;
+        } else if (fullName.length < 2) {
+            ValidationUI.showError('reg-fullname', 'Name must be at least 2 characters');
+            isValid = false;
         }
 
+        // Validate email
+        if (Validator.isEmpty(email)) {
+            ValidationUI.showError('reg-email', 'Email is required');
+            isValid = false;
+        } else if (!Validator.isValidEmail(email)) {
+            ValidationUI.showError('reg-email', 'Please enter a valid email address');
+            isValid = false;
+        } else if (getUserData(email)) {
+            ValidationUI.showError('reg-email', 'This email is already registered');
+            isValid = false;
+        }
+
+        // Validate password
+        const passwordValidation = Validator.validatePassword(password);
+        if (Validator.isEmpty(password)) {
+            ValidationUI.showError('reg-password', 'Password is required');
+            isValid = false;
+        } else if (!passwordValidation.isValid) {
+            ValidationUI.showError('reg-password', passwordValidation.message);
+            isValid = false;
+        }
+
+        if (!isValid) return;
+
+        // Create user
         const userData = {
             fullName,
-            password, // In a real app, hash this
-            profile: {},
+            password, // In production, this should be hashed
+            profile: { fullname: fullName, email: email },
             resume: {},
             theme: 'light',
             session: false
         };
+
         saveUserData(email, userData);
-        alert('Registration successful! Please login.');
-        showLogin.click();
+        ValidationUI.showToast('Registration successful! Please login.', 'success');
+
+        // Clear form and switch to login
+        registerForm.reset();
+        setTimeout(() => showLogin.click(), 1500);
     });
 
-    // Login user
-    loginForm.addEventListener('submit', function(e) {
+    // Real-time validation for registration form
+    const regEmailInput = document.getElementById('reg-email');
+    const regPasswordInput = document.getElementById('reg-password');
+    const regFullnameInput = document.getElementById('reg-fullname');
+
+    if (regEmailInput) {
+        regEmailInput.addEventListener('blur', function () {
+            const email = this.value.trim();
+            if (!Validator.isEmpty(email)) {
+                if (!Validator.isValidEmail(email)) {
+                    ValidationUI.showError('reg-email', 'Please enter a valid email address');
+                } else if (getUserData(email)) {
+                    ValidationUI.showError('reg-email', 'This email is already registered');
+                } else {
+                    ValidationUI.clearError('reg-email');
+                    ValidationUI.showSuccess('reg-email');
+                }
+            }
+        });
+    }
+
+    if (regPasswordInput) {
+        regPasswordInput.addEventListener('input', function () {
+            const password = this.value;
+            if (password.length > 0) {
+                const result = Validator.validatePassword(password);
+                ValidationUI.showPasswordStrength('reg-password', result);
+                if (result.isValid) {
+                    ValidationUI.clearError('reg-password');
+                }
+            }
+        });
+    }
+
+    if (regFullnameInput) {
+        regFullnameInput.addEventListener('blur', function () {
+            const name = this.value.trim();
+            if (!Validator.isEmpty(name) && name.length >= 2) {
+                ValidationUI.clearError('reg-fullname');
+                ValidationUI.showSuccess('reg-fullname');
+            }
+        });
+    }
+
+    // Login user with validation
+    loginForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const email = document.getElementById('login-email').value;
+
+        // Clear previous errors
+        ValidationUI.clearError('login-email');
+        ValidationUI.clearError('login-password');
+
+        const email = document.getElementById('login-email').value.trim();
         const password = document.getElementById('login-password').value;
 
+        let isValid = true;
+
+        // Validate email
+        if (Validator.isEmpty(email)) {
+            ValidationUI.showError('login-email', 'Email is required');
+            isValid = false;
+        } else if (!Validator.isValidEmail(email)) {
+            ValidationUI.showError('login-email', 'Please enter a valid email address');
+            isValid = false;
+        }
+
+        // Validate password
+        if (Validator.isEmpty(password)) {
+            ValidationUI.showError('login-password', 'Password is required');
+            isValid = false;
+        }
+
+        if (!isValid) return;
+
+        // Check credentials
         const userData = getUserData(email);
         if (userData && userData.password === password) {
             userData.session = true;
             saveUserData(email, userData);
             localStorage.setItem('currentUser', email);
-            showResumeSection();
+            ValidationUI.showToast('Login successful! Welcome back.', 'success');
+            setTimeout(() => showResumeSection(), 500);
         } else {
-            alert('Invalid credentials!');
+            ValidationUI.showError('login-email', 'Invalid email or password');
+            ValidationUI.showError('login-password', 'Invalid email or password');
+            ValidationUI.showToast('Invalid credentials. Please try again.', 'error');
         }
     });
 
-    // Logout
-    logoutBtn.addEventListener('click', function() {
-        const currentUser = localStorage.getItem('currentUser');
-        if (currentUser) {
-            const userData = getUserData(currentUser);
-            userData.session = false;
-            saveUserData(currentUser, userData);
-            localStorage.removeItem('currentUser');
-        }
-        showLanding();
-    });
+    // Real-time validation for login form
+    const loginEmailInput = document.getElementById('login-email');
+
+    if (loginEmailInput) {
+        loginEmailInput.addEventListener('blur', function () {
+            const email = this.value.trim();
+            if (!Validator.isEmpty(email) && !Validator.isValidEmail(email)) {
+                ValidationUI.showError('login-email', 'Please enter a valid email address');
+            } else {
+                ValidationUI.clearError('login-email');
+            }
+        });
+    }
+
+    // Logout - Fixed null reference bug
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                const userData = getUserData(currentUser);
+                if (userData) {
+                    userData.session = false;
+                    saveUserData(currentUser, userData);
+                }
+                localStorage.removeItem('currentUser');
+            }
+            ValidationUI.showToast('Logged out successfully', 'info');
+            showLanding();
+        });
+    }
 
     function showLanding() {
         if (landingSection) landingSection.classList.remove('hidden');

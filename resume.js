@@ -1,7 +1,7 @@
 // resume.js - Handles resume form inputs, live preview, and data binding
 
-document.addEventListener('DOMContentLoaded', function() {
-    
+document.addEventListener('DOMContentLoaded', function () {
+
     const form = document.getElementById('resume-form');
     const skillsList = document.getElementById('skills-list');
     const addSkillBtn = document.getElementById('add-skill');
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadBtn = document.getElementById('download-resume');
     const ctaCreateBtn = document.getElementById('cta-create');
     const ctaDemoBtn = document.getElementById('cta-demo');
-    
+
     // New elements for updated header
     const authControls = document.getElementById('auth-controls');
     const profileDropdown = document.getElementById('profile-dropdown');
@@ -22,9 +22,39 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUserDataInternal();
     updateAuthUI();
 
-    // Two-way data binding for inputs
+    // Two-way data binding for inputs with validation
     if (form) {
-        form.addEventListener('input', function() {
+        form.addEventListener('input', function (e) {
+            // Real-time validation for specific fields
+            const fieldId = e.target.id;
+
+            if (fieldId === 'email') {
+                const email = e.target.value.trim();
+                if (email && !Validator.isValidEmail(email)) {
+                    ValidationUI.showError('email', 'Please enter a valid email address');
+                } else {
+                    ValidationUI.clearError('email');
+                }
+            }
+
+            if (fieldId === 'phone') {
+                const phone = e.target.value.trim();
+                if (phone && !Validator.isValidPhone(phone)) {
+                    ValidationUI.showError('phone', 'Please enter a valid phone number');
+                } else {
+                    ValidationUI.clearError('phone');
+                }
+            }
+
+            if (fieldId === 'linkedin') {
+                const url = e.target.value.trim();
+                if (url && !Validator.isValidURL(url)) {
+                    ValidationUI.showError('linkedin', 'Please enter a valid URL');
+                } else {
+                    ValidationUI.clearError('linkedin');
+                }
+            }
+
             updatePreview();
             saveResumeData();
         });
@@ -32,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle skills
     if (addSkillBtn) {
-        addSkillBtn.addEventListener('click', function() {
+        addSkillBtn.addEventListener('click', function () {
             const skill = skillInput.value.trim();
             if (skill && !skills.includes(skill)) {
                 skills.push(skill);
@@ -45,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (skillsList) {
-        skillsList.addEventListener('click', function(e) {
+        skillsList.addEventListener('click', function (e) {
             if (e.target.classList.contains('skill-tag')) {
                 const skill = e.target.textContent;
                 skills = skills.filter(s => s !== skill);
@@ -55,27 +85,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Toggle dropdown menu
     const profileBtn = document.querySelector('.profile-btn');
     if (profileBtn) {
-        profileBtn.addEventListener('click', function(e) {
+        profileBtn.addEventListener('click', function (e) {
             e.preventDefault();
             const dropdown = document.getElementById('dropdown-menu');
             dropdown.classList.toggle('show');
         });
     }
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(event) {
+
+    // Close dropdown when clicking outside - Fixed null reference bug
+    document.addEventListener('click', function (event) {
         const dropdown = document.getElementById('dropdown-menu');
         const profileBtn = document.querySelector('.profile-btn');
-        
-        if (!profileBtn.contains(event.target) && !dropdown.contains(event.target)) {
-            dropdown.classList.remove('show');
+
+        if (dropdown && profileBtn) {
+            if (!profileBtn.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
         }
     });
-    
+
     // Conditionally show download button based on login status
     function updateDownloadButtonVisibility() {
         const currentUser = localStorage.getItem('currentUser');
@@ -85,16 +117,16 @@ document.addEventListener('DOMContentLoaded', function() {
             downloadBtn.classList.add('hidden');
         }
     }
-    
+
     // Update auth UI based on login status
     function updateAuthUI() {
         const currentUser = localStorage.getItem('currentUser');
-        
+
         if (currentUser) {
             // User is logged in
             authControls.classList.add('hidden');
             profileDropdown.classList.remove('hidden');
-            
+
             // Set user name in dropdown
             const userData = getUserData(currentUser);
             const displayName = userData?.profile?.fullname || userData?.profile?.email || currentUser;
@@ -104,45 +136,84 @@ document.addEventListener('DOMContentLoaded', function() {
             authControls.classList.remove('hidden');
             profileDropdown.classList.add('hidden');
         }
-        
+
         updateDownloadButtonVisibility();
     }
-    
+
     // Sign In button click handler
     if (showAuthBtn) {
-        showAuthBtn.addEventListener('click', function() {
+        showAuthBtn.addEventListener('click', function () {
             document.getElementById('auth-section').classList.remove('hidden');
         });
     }
-    
+
     // Logout from dropdown
     if (logoutDropdown) {
-        logoutDropdown.addEventListener('click', function(e) {
+        logoutDropdown.addEventListener('click', function (e) {
             e.preventDefault();
             localStorage.removeItem('currentUser');
             updateAuthUI();
         });
     }
-    
+
     // Check login status when page loads
     updateAuthUI();
-    
+
+    // PDF Export functionality
     if (downloadBtn) {
-        downloadBtn.addEventListener('click', function(){
-            window.print();
+        downloadBtn.addEventListener('click', function () {
+            // Validate that resume has minimum required data
+            const nameValue = document.getElementById('name').value.trim();
+
+            if (!nameValue) {
+                ValidationUI.showToast('Please enter your name before downloading', 'error');
+                document.getElementById('name').focus();
+                return;
+            }
+
+            // Show loading toast
+            ValidationUI.showToast('Generating PDF...', 'info');
+
+            const element = document.getElementById('resume-preview');
+            const userName = nameValue.replace(/\s+/g, '_');
+            const filename = `${userName}_Resume.pdf`;
+
+            const opt = {
+                margin: [0.5, 0.5, 0.5, 0.5],
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    letterRendering: true
+                },
+                jsPDF: {
+                    unit: 'in',
+                    format: 'letter',
+                    orientation: 'portrait',
+                    compress: true
+                }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                ValidationUI.showToast('Resume downloaded successfully!', 'success');
+            }).catch((error) => {
+                console.error('PDF generation error:', error);
+                ValidationUI.showToast('Error generating PDF. Please try again.', 'error');
+            });
         });
     }
 
     // Hero section button event handlers
     if (ctaCreateBtn) {
-        ctaCreateBtn.addEventListener('click', function() {
+        ctaCreateBtn.addEventListener('click', function () {
             // Redirect to resume builder page instead of showing locally
             window.location.href = './resume-builder.html';
         });
     }
-    
+
     if (ctaDemoBtn) {
-        ctaDemoBtn.addEventListener('click', function() {
+        ctaDemoBtn.addEventListener('click', function () {
             // Redirect to resume builder page with sample data in URL parameters
             const sampleData = {
                 name: 'John Doe',
@@ -162,10 +233,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 expDesc: 'Developed and maintained web applications using modern technologies.',
                 achievements: 'Certified AWS Developer, Led team of 5 developers on major project'
             };
-            
+
             // Store sample data in localStorage
             localStorage.setItem('sampleResumeData', JSON.stringify(sampleData));
-            
+
             // Redirect to resume builder page
             window.location.href = './resume-builder.html';
         });
@@ -178,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updatePreview() {
         const byId = id => document.getElementById(id);
-        const setText = (id, text, fallback='') => { const el = byId(id); if(el) el.textContent = text || fallback; };
+        const setText = (id, text, fallback = '') => { const el = byId(id); if (el) el.textContent = text || fallback; };
 
         setText('preview-name', byId('name') ? byId('name').value : '', 'Your Name');
         setText('preview-email', byId('email') ? byId('email').value : '');
@@ -233,13 +304,13 @@ document.addEventListener('DOMContentLoaded', function() {
         saveUserData(currentUser, userData);
     }
 
-    function loadUserDataInternal(){
+    function loadUserDataInternal() {
         // storage.loadUserData will populate basic fields, then we sync skills and preview
         loadUserData();
         const currentUser = localStorage.getItem('currentUser');
-        if(!currentUser) return;
+        if (!currentUser) return;
         const userData = getUserData(currentUser) || {};
-        if(userData.resume && userData.resume.skills){
+        if (userData.resume && userData.resume.skills) {
             skills = userData.resume.skills.slice();
         }
         renderSkills();
@@ -252,16 +323,16 @@ document.addEventListener('DOMContentLoaded', function() {
 const scrollToTopBtn = document.getElementById("scrollToTopBtn");
 
 window.addEventListener("scroll", () => {
-  if (window.scrollY > 300) {
-    scrollToTopBtn.classList.add("show");
-  } else {
-    scrollToTopBtn.classList.remove("show");
-  }
+    if (window.scrollY > 300) {
+        scrollToTopBtn.classList.add("show");
+    } else {
+        scrollToTopBtn.classList.remove("show");
+    }
 });
 
 scrollToTopBtn.addEventListener("click", () => {
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth",
-  });
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+    });
 });
