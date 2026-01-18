@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Update theme toggle icons
     if (btn) {
-      const sunIcon = btn.querySelector('.icon-sun');
-      const moonIcon = btn.querySelector('.icon-moon');
+      const sunIcon = btn.querySelector('.theme-sun');
+      const moonIcon = btn.querySelector('.theme-moon');
 
       if (t === 'dark') {
         if (sunIcon) sunIcon.style.display = 'none';

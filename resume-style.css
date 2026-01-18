@@ -220,8 +220,8 @@ header h1 {
     color: white;
 }
 
-.icon-sun,
-.icon-moon {
+.theme-sun,
+.theme-moon {
     display: none;
     position: relative;
     z-index: 2;
@@ -229,12 +229,12 @@ header h1 {
     color: #ffffff;
 }
 
-.icon-sun svg,
-.icon-moon svg {
+.theme-sun svg,
+.theme-moon svg {
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
-#theme-toggle .icon-sun {
+#theme-toggle .theme-sun {
     display: block;
     animation: sunPulse 2s ease-in-out infinite;
 }
@@ -250,7 +250,7 @@ header h1 {
     }
 }
 
-#theme-toggle:hover .icon-sun {
+#theme-toggle:hover .theme-sun {
     animation: sunRotate 0.6s ease-in-out;
 }
 
@@ -275,11 +275,11 @@ header h1 {
     box-shadow: 0 6px 20px rgba(224, 253, 249, 0.4);
 }
 
-[data-theme="dark"] #theme-toggle .icon-sun {
+[data-theme="dark"] #theme-toggle .theme-sun {
     display: none;
 }
 
-[data-theme="dark"] #theme-toggle .icon-moon {
+[data-theme="dark"] #theme-toggle .theme-moon {
     display: block;
     animation: moonFloat 3s ease-in-out infinite;
     color: #28454e;
@@ -294,7 +294,7 @@ header h1 {
     }
 }
 
-[data-theme="dark"] #theme-toggle:hover .icon-moon {
+[data-theme="dark"] #theme-toggle:hover .theme-moon {
     animation: moonRotate 0.8s ease-in-out;
 }
 
