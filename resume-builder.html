@@ -1,209 +1,195 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.getElementById('resume-form');
-    const skillsList = document.getElementById('skills-list');
-    const addSkillBtn = document.getElementById('add-skill');
-    const skillInput = document.getElementById('skill-input');
-    const downloadPdfBtn = document.getElementById('download-pdf');
-    const downloadPreviewPdfBtn = document.getElementById('download-preview-pdf');
-    const previewContainer = document.getElementById("resume-preview");
 
-    let skills = [];
-
-    // ================= AUTH CHECK =================
+    /* ================= AUTH CHECK ================= */
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
         window.location.href = './login.html';
         return;
     }
 
-    // Load user data
-    window.skills = skills; // global for storage
-    if (typeof loadUserDataInternal === "function") loadUserDataInternal();
+    /* ================= ELEMENTS ================= */
+    const form = document.getElementById('resume-form');
+    const skillsList = document.getElementById('skills-list');
+    const addSkillBtn = document.getElementById('add-skill');
+    const skillInput = document.getElementById('skill-input');
+    const downloadPdfBtn = document.getElementById('download-pdf');
+    const downloadPreviewPdfBtn = document.getElementById('download-preview-pdf');
+    const previewContainer = document.getElementById('resume-preview');
 
-    // ================= FORM INPUT HANDLING =================
+    const authControls = document.getElementById('auth-controls');
+    const profileDropdown = document.getElementById('profile-dropdown');
+    const showAuthBtn = document.getElementById('show-auth');
+    const logoutDropdown = document.getElementById('logout-dropdown');
+    const dropdownUserName = document.getElementById('dropdown-user-name');
+
+    let skills = [];
+
+    /* ================= INIT ================= */
+    loadUserDataInternal();
+    updateAuthUI();
+    renderSkills();
+    updatePreview();
+    loadSectionOrder();
+    initSectionDragAndDrop();
+
+    /* ================= FORM INPUT ================= */
     if (form) {
-        form.addEventListener('input', function () {
+        form.addEventListener('input', function (e) {
+
+            const id = e.target.id;
+            const value = e.target.value.trim();
+
+            if (id === 'email' && value && !Validator.isValidEmail(value)) {
+                ValidationUI.showError('email', 'Invalid email');
+            } else ValidationUI.clearError('email');
+
+            if (id === 'phone' && value && !Validator.isValidPhone(value)) {
+                ValidationUI.showError('phone', 'Invalid phone');
+            } else ValidationUI.clearError('phone');
+
+            if (id === 'linkedin' && value && !Validator.isValidLinkedIn(value)) {
+                ValidationUI.showError('linkedin', 'Invalid LinkedIn URL');
+            } else ValidationUI.clearError('linkedin');
+
+            if (id === 'github' && value && !Validator.isValidGitHub(value)) {
+                ValidationUI.showError('github', 'Invalid GitHub URL');
+            } else ValidationUI.clearError('github');
+
             updatePreview();
             saveResumeData();
         });
     }
 
-    // ================= SKILLS HANDLING =================
-    function renderSkills() {
-        if (!skillsList) return;
-        skillsList.innerHTML = skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('');
-    }
-
-    if (addSkillBtn) {
-        addSkillBtn.addEventListener('click', function () {
-            const skill = skillInput.value.trim();
-            if (skill && !skills.includes(skill)) {
-                skills.push(skill);
-                skillInput.value = '';
-                renderSkills();
-                updatePreview();
-                saveResumeData();
-            }
-        });
-    }
-
-    if (skillsList) {
-        skillsList.addEventListener('click', function (e) {
-            if (e.target.classList.contains('skill-tag')) {
-                const skill = e.target.textContent;
-                skills = skills.filter(s => s !== skill);
-                renderSkills();
-                updatePreview();
-                saveResumeData();
-            }
-        });
-    }
-
-    // ================= PREVIEW UPDATE =================
-    function updatePreview() {
-        const byId = id => document.getElementById(id);
-        const setText = (id, text, fallback = '') => {
-            const el = byId(id);
-            if (el) el.textContent = text || fallback;
-        };
-
-        setText('preview-name', byId('name')?.value, 'Your Name');
-        setText('preview-email', byId('email')?.value);
-        setText('preview-phone', byId('phone')?.value);
-        setText('preview-location', byId('location')?.value);
-        setText('preview-linkedin', byId('linkedin')?.value);
-        setText('preview-github', byId('github')?.value);
-        setText('preview-summary', byId('summary')?.value);
-
-        // Education
-        const degree = byId('degree')?.value || '';
-        const inst = byId('institution')?.value || '';
-        const year = byId('year')?.value || '';
-        const cgpa = byId('cgpa')?.value || '';
-        setText('preview-education', `${degree}${degree || inst ? ' from ' : ''}${inst}${year ? ', ' + year : ''}${cgpa ? ' (CGPA: ' + cgpa + ')' : ''}`);
-
-        // Skills
-        const previewSkills = document.getElementById('preview-skills');
-        if (previewSkills) previewSkills.innerHTML = skills.map(s => `<span>${s}</span>`).join('');
-
-        // Experience
-        const previewExp = document.getElementById('preview-experience');
-        if (previewExp) {
-            const title = byId('exp-title')?.value || '';
-            const org = byId('exp-org')?.value || '';
-            const dur = byId('exp-duration')?.value || '';
-            const desc = byId('exp-desc')?.value || '';
-            previewExp.innerHTML = `<strong>${title}</strong>${org ? ' at ' + org : ''}${dur ? '<br>' + dur : ''}${desc ? '<br>' + desc : ''}`;
+    /* ================= SKILLS ================= */
+    addSkillBtn?.addEventListener('click', () => {
+        const skill = skillInput.value.trim();
+        if (skill && !skills.includes(skill)) {
+            skills.push(skill);
+            skillInput.value = '';
+            renderSkills();
+            updatePreview();
+            saveResumeData();
         }
+    });
 
-        // Achievements
-        setText('preview-achievements', byId('achievements')?.value || '');
+    skillsList?.addEventListener('click', e => {
+        if (e.target.classList.contains('skill-tag')) {
+            skills = skills.filter(s => s !== e.target.textContent);
+            renderSkills();
+            updatePreview();
+            saveResumeData();
+        }
+    });
+
+    function renderSkills() {
+        skillsList.innerHTML = skills.map(s => `<span class="skill-tag">${s}</span>`).join('');
     }
 
-    // ================= SAVE RESUME DATA =================
+    /* ================= PREVIEW ================= */
+    function updatePreview() {
+        const g = id => document.getElementById(id)?.value || '';
+        const t = (id, v, f='') => document.getElementById(id).textContent = v || f;
+
+        t('preview-name', g('name'), 'Your Name');
+        t('preview-email', g('email'));
+        t('preview-phone', g('phone'));
+        t('preview-location', g('location'));
+        t('preview-linkedin', g('linkedin'));
+        t('preview-github', g('github'));
+        t('preview-summary', g('summary'));
+
+        t('preview-education',
+            `${g('degree')}${g('institution') ? ' from ' + g('institution') : ''}${g('year') ? ', ' + g('year') : ''}${g('cgpa') ? ' (CGPA: ' + g('cgpa') + ')' : ''}`
+        );
+
+        document.getElementById('preview-skills').innerHTML =
+            skills.map(s => `<span>${s}</span>`).join('');
+
+        document.getElementById('preview-experience').innerHTML =
+            `<strong>${g('exp-title')}</strong>${g('exp-org') ? ' at ' + g('exp-org') : ''}<br>${g('exp-duration')}<br>${g('exp-desc')}`;
+
+        t('preview-achievements', g('achievements'));
+    }
+
+    /* ================= STORAGE ================= */
     function saveResumeData() {
-        if (!currentUser) return;
         const userData = getUserData(currentUser) || {};
         userData.resume = {
-            name: document.getElementById('name')?.value || '',
-            email: document.getElementById('email')?.value || '',
-            phone: document.getElementById('phone')?.value || '',
-            location: document.getElementById('location')?.value || '',
-            linkedin: document.getElementById('linkedin')?.value || '',
-            github: document.getElementById('github')?.value || '',
-            summary: document.getElementById('summary')?.value || '',
-            degree: document.getElementById('degree')?.value || '',
-            institution: document.getElementById('institution')?.value || '',
-            year: document.getElementById('year')?.value || '',
-            cgpa: document.getElementById('cgpa')?.value || '',
-            skills: skills,
-            expTitle: document.getElementById('exp-title')?.value || '',
-            expOrg: document.getElementById('exp-org')?.value || '',
-            expDuration: document.getElementById('exp-duration')?.value || '',
-            expDesc: document.getElementById('exp-desc')?.value || '',
-            achievements: document.getElementById('achievements')?.value || ''
+            name: g('name'), email: g('email'), phone: g('phone'),
+            location: g('location'), linkedin: g('linkedin'), github: g('github'),
+            summary: g('summary'), degree: g('degree'), institution: g('institution'),
+            year: g('year'), cgpa: g('cgpa'), skills,
+            expTitle: g('exp-title'), expOrg: g('exp-org'),
+            expDuration: g('exp-duration'), expDesc: g('exp-desc'),
+            achievements: g('achievements')
         };
         saveUserData(currentUser, userData);
     }
 
-    // ================= PDF EXPORT =================
-    function exportToPDF() {
-        const element = document.getElementById('resume-preview');
-        const userName = document.getElementById('name')?.value.replace(/\s+/g, '_') || 'Resume';
-        const opt = {
+    /* ================= PDF ================= */
+    function exportPDF() {
+        if (!g('name')) {
+            ValidationUI.showToast('Enter name first', 'error');
+            return;
+        }
+        html2pdf().set({
             margin: 0.5,
-            filename: `${userName}_Resume.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait', compress: true }
-        };
-        html2pdf().set(opt).from(element).save();
+            filename: `${g('name').replace(/\s+/g,'_')}_Resume.pdf`,
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        }).from(previewContainer).save();
     }
 
-    if (downloadPdfBtn) downloadPdfBtn.addEventListener('click', exportToPDF);
-    if (downloadPreviewPdfBtn) downloadPreviewPdfBtn.addEventListener('click', exportToPDF);
+    downloadPdfBtn?.addEventListener('click', exportPDF);
+    downloadPreviewPdfBtn?.addEventListener('click', exportPDF);
 
-    // ================= SECTION DRAG & DROP =================
-    let draggedSection = null;
+    /* ================= AUTH UI ================= */
+    function updateAuthUI() {
+        if (currentUser) {
+            authControls.classList.add('hidden');
+            profileDropdown.classList.remove('hidden');
+            const user = getUserData(currentUser);
+            dropdownUserName.textContent = user?.profile?.fullname || currentUser;
+        }
+    }
+
+    logoutDropdown?.addEventListener('click', e => {
+        e.preventDefault();
+        localStorage.removeItem('currentUser');
+        window.location.href = './index.html';
+    });
+
+    /* ================= DRAG & DROP ================= */
+    let dragged = null;
 
     function initSectionDragAndDrop() {
-        const sections = previewContainer.querySelectorAll(".preview-section-block");
-        sections.forEach(section => {
-            section.setAttribute('draggable', true);
-
-            section.addEventListener("dragstart", () => {
-                draggedSection = section;
-                section.classList.add("dragging");
-            });
-
-            section.addEventListener("dragend", () => {
-                section.classList.remove("dragging");
-                draggedSection = null;
-                saveSectionOrder();
-            });
-
-            previewContainer.addEventListener("dragover", (e) => {
-                e.preventDefault();
-                const afterElement = getDragAfterElement(previewContainer, e.clientY);
-                if (!draggedSection) return;
-                if (!afterElement) previewContainer.appendChild(draggedSection);
-                else previewContainer.insertBefore(draggedSection, afterElement);
-            });
+        previewContainer.querySelectorAll('.preview-section-block').forEach(sec => {
+            sec.draggable = true;
+            sec.addEventListener('dragstart', () => dragged = sec);
+            sec.addEventListener('dragend', saveSectionOrder);
         });
-    }
 
-    function getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll(".preview-section-block:not(.dragging)")];
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
-            return closest;
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
+        previewContainer.addEventListener('dragover', e => {
+            e.preventDefault();
+            const after = [...previewContainer.children]
+                .find(c => e.clientY < c.getBoundingClientRect().top + c.offsetHeight / 2);
+            after ? previewContainer.insertBefore(dragged, after) : previewContainer.appendChild(dragged);
+        });
     }
 
     function saveSectionOrder() {
-        const order = [];
-        previewContainer.querySelectorAll(".preview-section-block").forEach(s => order.push(s.dataset.section));
-        localStorage.setItem("resumeSectionOrder", JSON.stringify(order));
+        const order = [...previewContainer.children].map(s => s.dataset.section);
+        localStorage.setItem('resumeSectionOrder', JSON.stringify(order));
     }
 
     function loadSectionOrder() {
-        const savedOrder = JSON.parse(localStorage.getItem("resumeSectionOrder"));
-        if (!savedOrder) return;
-        savedOrder.forEach(key => {
-            const section = previewContainer.querySelector(`.preview-section-block[data-section="${key}"]`);
-            if (section) previewContainer.appendChild(section);
+        const order = JSON.parse(localStorage.getItem('resumeSectionOrder') || '[]');
+        order.forEach(k => {
+            const sec = previewContainer.querySelector(`[data-section="${k}"]`);
+            if (sec) previewContainer.appendChild(sec);
         });
     }
 
-    // Initialize drag & drop and load order
-    loadSectionOrder();
-    initSectionDragAndDrop();
-
-    // Initial render
-    renderSkills();
-    updatePreview();
 });
 </script>

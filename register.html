@@ -4,44 +4,73 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Register - Resume Builder</title>
+
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
 <link rel="stylesheet" type="text/css" href="css/style.css">
 <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
 <link href="https://fonts.googleapis.com/css2?family=Sen:wght@400;700;800&display=swap" rel="stylesheet">
 
 <style>
-/* Add your CSS from previous register.html here */
-/* (Background gradient, card styles, form inputs, buttons, toast notifications, etc.) */
+/* Your existing register page CSS */
 </style>
 </head>
+
 <body>
+
+<!-- Demo Warning Banner -->
+<div
+  style="
+    background:#fff3cd;
+    padding:12px;
+    border:1px solid #ffeeba;
+    font-size:14px;
+    margin-bottom:10px;
+  "
+  role="alert"
+>
+  ⚠️ <strong>Demo Project:</strong>
+  This resume builder is for demonstration purposes only.
+  Do not enter real personal information (email, phone, address, etc.).
+</div>
+
 <div class="main-content">
     <div class="register-container">
         <div class="register-card">
+
             <h2>Create Account</h2>
             <p class="subtitle">Join us and start building your professional resume</p>
 
             <div id="register-form" class="register-form">
                 <form id="register">
+
                     <div class="form-group">
-                        <label for="reg-fullname"><i class="fa fa-user"></i> Full Name</label>
+                        <label for="reg-fullname">
+                            <i class="fa fa-user"></i> Full Name
+                        </label>
                         <input type="text" id="reg-fullname" placeholder="Enter your full name" required>
                         <div class="error-message" id="name-error-message"></div>
                     </div>
 
                     <div class="form-group">
-                        <label for="reg-email"><i class="fa fa-envelope"></i> Email Address</label>
+                        <label for="reg-email">
+                            <i class="fa fa-envelope"></i> Email Address
+                        </label>
                         <input type="email" id="reg-email" placeholder="Enter your email" required>
                         <div class="error-message" id="email-error-message"></div>
                     </div>
 
                     <div class="form-group">
-                        <label for="reg-password"><i class="fa fa-lock"></i> Password</label>
+                        <label for="reg-password">
+                            <i class="fa fa-lock"></i> Password
+                        </label>
                         <input type="password" id="reg-password" placeholder="Create a strong password" required>
+
                         <button type="button" class="password-toggle" id="toggle-password">
                             <i class="fa fa-eye" id="eye-icon"></i>
                         </button>
+
                         <div class="error-message" id="password-error-message"></div>
+
                         <div class="password-strength">
                             <div class="strength-bar">
                                 <div class="strength-fill" id="strength-fill"></div>
@@ -51,15 +80,24 @@
                     </div>
 
                     <div class="button-group">
-                        <button type="submit"><i class="fa fa-user-plus"></i> Register</button>
-                        <a href="./index.html" class="btn-back-home-link"><i class="fa fa-home"></i> Home</a>
+                        <button type="submit">
+                            <i class="fa fa-user-plus"></i> Register
+                        </button>
+                        <a href="./index.html" class="btn-back-home-link">
+                            <i class="fa fa-home"></i> Home
+                        </a>
                     </div>
+
                 </form>
 
                 <div class="divider"><span>or</span></div>
 
-                <p>Already have an account? <a href="./login.html" id="show-login">Sign In</a></p>
+                <p>
+                    Already have an account?
+                    <a href="./login.html" id="show-login">Sign In</a>
+                </p>
             </div>
+
         </div>
     </div>
 </div>
@@ -70,22 +108,20 @@
 <script src="theme.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+
     const togglePassword = document.getElementById('toggle-password');
     const passwordInput = document.getElementById('reg-password');
     const eyeIcon = document.getElementById('eye-icon');
 
-    if (togglePassword && passwordInput) {
-        togglePassword.addEventListener('click', function() {
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeIcon.classList.replace('fa-eye', 'fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                eyeIcon.classList.replace('fa-eye-slash', 'fa-eye');
-            }
+    if (togglePassword) {
+        togglePassword.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            eyeIcon.className = isPassword ? 'fa fa-eye-slash' : 'fa fa-eye';
         });
     }
+
 });
 </script>
 
